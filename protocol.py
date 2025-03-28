@@ -59,3 +59,47 @@ def recvPDU(sock):
         raise RuntimeError("PDU decoding failed: {e}")
     print(f"decoded PDU data: {decoded_pdu}")
     return decoded_pdu
+
+
+def sendAckPDU(sock):
+    pdu = ("ack", None)
+    return sendPDU(sock, pdu)
+
+
+def sendNackPDU(sock, reason):
+    pdu = ("nack", reason)
+    return sendPDU(sock, pdu)
+
+# check if status is ack or nack.
+
+
+def recvStatusPDU(sock):
+    decoded_pdu = recvPDU(sock)
+    if decoded_pdu[0] == "ack":
+        return (True, None)
+    elif decoded_pdu[0] == "nack":
+        return (False, decoded_pdu[1])
+    else:
+        raise ValueError("Received PDU is neither an ack nor a nack")
+
+
+def sendRegPDU(sock, algoName, className, port):
+    pdu = ("reg", {
+        "algoName": algoName, "className": className, "port": port
+    })
+    sendPDU(sock, pdu)
+
+
+def sendNextCycle(sock, timestamp):
+    pdu = ("nextCycle", {"timestamp": timestamp})
+    sendPDU(sock, pdu)
+
+
+def sendShiftValuesPDU(sock):
+    pdu = ("shiftValues", None)
+    sendPDU(sock, pdu)
+
+
+def sendDonePDU(sock):
+    pdu = ("done", None)
+    sendPDU(sock, pdu)
