@@ -39,3 +39,12 @@ def connect_to_core(algoName, className, url, data_port):
     except Exception as e:
         print(f"Error while connecting: {e}")
         raise
+
+
+def connect_to_peer(addr, data_port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((addr, data_port))
+        return sock
+    except OSError as e:
+        print(f"Error while connecting: {e}")
