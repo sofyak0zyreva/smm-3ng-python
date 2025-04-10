@@ -1,3 +1,4 @@
+import select
 import socket
 import re
 from protocol import *
@@ -48,3 +49,75 @@ def connect_to_peer(addr, data_port):
         return sock
     except OSError as e:
         print(f"Error while connecting: {e}")
+
+# conn_pdu = {"push" : [{"localParamName": , "remoteAlgoName": , "remoteParamName": , "address": , "port" : }, {}, ..],
+# "pull" : [{}, {}, ..]}
+
+
+def print_conn_pdu(algoName, conn_pdu):
+    file_path = f"/tmp/{algoName}"
+    # the with statement automatically closes the file when the block ends
+    with open(file_path, "w") as f:
+        print(f"Temporary file created at: {f.name}")
+        f.write(f"pull:")
+        for c in (conn_pdu["pull"]):
+            f.write(
+                f'{c["localParamName"]} <- {c["remoteAlgoName"]}({c["remoteParamName"]}) at {c["address"]}:{c["port"]}')
+        f.write(f"push:")
+        for c in (conn_pdu["push"]):
+            f.write(
+                f'{c["localParamName"]} <- {c["remoteAlgoName"]}({c["remoteParamName"]}) at {c["address"]}:{c["port"]}')
+
+
+# pullValuesReq = ["", "", ..]
+# SMM3NG-Variable = {"name": "<..>", "value": ("<..>", <..>)}
+# PullValuesRepPDU = [SMM3NG-Variable, SMM3NG-Variable, ..]
+output_params = {}
+input_params = {}   # Stores received values
+
+
+def data_responder_proc(sock):
+    peers = [sock]
+    while True:
+        read_fds = peers.copy()
+        # для мультиплексирования сокетов
+        try:
+            readable, _, _ = select.select(read_fds, [], [])
+        except (ValueError, OSError) as e:
+            print(f"Select error: {e}")
+        for s in readable:
+            if s == sock:
+                try:
+                    conn, _ = sock.accept()
+                    peers.append(conn)
+                except OSError as e:
+                    print(f"Accept failed: {e}")
+            else:
+                try:
+                    pdu = recvPDU(s)
+                except (ValueError, RuntimeError) as e:
+                    print(f"Cannot receive data from agent peer: {e}")
+                    return
+
+                try:
+                    # handling error in reception??
+                    if pdu[0] == "pullValuesReq":
+                        reply = []
+                        for param_name in (pdu[1]):
+                            if param_name in output_params:
+                                var = {"name": param_name,
+                                       "value": output_params[param_name]}
+                            reply.append(var)
+                        sendPDU(s, ("pullValuesRep", reply))
+                    elif pdu[0] == "pushValues":
+                        for var in pdu[1]:
+                            param_name = var["name"]
+                            input_params[param_name] = var["value"]
+                        sendAckPDU(s)
+                    else:
+                        print(f"Invalid PDU received from agent peer")
+                        return
+                except (RuntimeError, OSError, struct.error, ValueError) as e:
+                    print(f"Cannot send PDU to agent peer: {e}")
+                    # peers.remove(s)
+                    # s.close()
