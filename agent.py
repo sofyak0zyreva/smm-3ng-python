@@ -121,3 +121,16 @@ def data_responder_proc(sock):
                     print(f"Cannot send PDU to agent peer: {e}")
                     # peers.remove(s)
                     # s.close()
+
+# toy start_agent
+def start_agent(algoName, className, url):
+    # Create a socket for receiving data from other agents
+    data_responder_socket = create_data_responder_socket()
+    # Get the assigned port
+    port = data_responder_socket.getsockname()[1]
+    try:
+        control_socket = connect_to_core(algoName, className, url, port)
+        print(f"control_socket ${control_socket}")
+    except Exception as e:
+        print(f"Error occured: {e}")
+        return control_socket
