@@ -112,7 +112,7 @@ class TestPDUSocketFunctions(unittest.TestCase):
         self.assertFalse(status)
         self.assertEqual(reason, "Invalid input")
 
-    def test_recv_nack_pdu(self):
+    def test_recv_non_status_pdu(self):
         pdu = ("done", None)
         encoded = asn1_compiler.encode('SMM3NG-PDU', pdu)
         self.mock_socket.recv.side_effect = [
