@@ -1,6 +1,8 @@
+import re
 import select
 import socket
-import re
+from typing import Any
+
 from protocol import *
 
 
@@ -33,7 +35,7 @@ def connect_to_core(algoName, className, url, data_port):
     try:
         sock.connect((host, port))
         print(f"Connected to {host}:{port}")
-        print(f"sending reg pdu")
+        print("sending reg pdu")
         sendRegPDU(sock, algoName, className, data_port)
         return sock
 
@@ -50,7 +52,9 @@ def connect_to_peer(addr, data_port):
     except OSError as e:
         print(f"Error while connecting: {e}")
 
-# conn_pdu = {"push" : [{"localParamName": , "remoteAlgoName": , "remoteParamName": , "address": , "port" : }, {}, ..],
+
+# conn_pdu = {"push" : [{"localParamName": , "remoteAlgoName": ,
+#  "remoteParamName": , "address": , "port" : }, {}, ..],
 # "pull" : [{}, {}, ..]}
 
 
@@ -59,21 +63,23 @@ def print_conn_pdu(algoName, conn_pdu):
     # the with statement automatically closes the file when the block ends
     with open(file_path, "w") as f:
         print(f"Temporary file created at: {f.name}")
-        f.write(f"pull:")
-        for c in (conn_pdu["pull"]):
+        f.write("pull:")
+        for c in conn_pdu["pull"]:
             f.write(
-                f'{c["localParamName"]} <- {c["remoteAlgoName"]}({c["remoteParamName"]}) at {c["address"]}:{c["port"]}')
-        f.write(f"push:")
-        for c in (conn_pdu["push"]):
+                f'{c["localParamName"]} <- {c["remoteAlgoName"]}({c["remoteParamName"]}) at {c["address"]}:{c["port"]}'
+            )
+        f.write("push:")
+        for c in conn_pdu["push"]:
             f.write(
-                f'{c["localParamName"]} <- {c["remoteAlgoName"]}({c["remoteParamName"]}) at {c["address"]}:{c["port"]}')
+                f'{c["localParamName"]} <- {c["remoteAlgoName"]}({c["remoteParamName"]}) at {c["address"]}:{c["port"]}'
+            )
 
 
 # pullValuesReq = ["", "", ..]
 # SMM3NG-Variable = {"name": "<..>", "value": ("<..>", <..>)}
 # PullValuesRepPDU = [SMM3NG-Variable, SMM3NG-Variable, ..]
-output_params = {}
-input_params = {}   # Stores received values
+output_params: dict[str, tuple[Any, Any]] = {}
+input_params = {}  # Stores received values
 
 
 def data_responder_proc(sock):
@@ -103,10 +109,12 @@ def data_responder_proc(sock):
                     # handling error in reception??
                     if pdu[0] == "pullValuesReq":
                         reply = []
-                        for param_name in (pdu[1]):
+                        for param_name in pdu[1]:
                             if param_name in output_params:
-                                var = {"name": param_name,
-                                       "value": output_params[param_name]}
+                                var = {
+                                    "name": param_name,
+                                    "value": output_params[param_name],
+                                }
                             reply.append(var)
                         sendPDU(s, ("pullValuesRep", reply))
                     elif pdu[0] == "pushValues":
@@ -115,7 +123,7 @@ def data_responder_proc(sock):
                             input_params[param_name] = var["value"]
                         sendAckPDU(s)
                     else:
-                        print(f"Invalid PDU received from agent peer")
+                        print("Invalid PDU received from agent peer")
                         return
                 except (RuntimeError, OSError, struct.error, ValueError) as e:
                     print(f"Cannot send PDU to agent peer: {e}")
@@ -188,7 +196,7 @@ def start_agent(algoName, className, url):
 
         while True:
             for conn in conn_pdu[1]["pull"]:
-                print(f"loop")
+                print("loop")
                 peer_sock = peers[conn["remoteAlgoName"]]
                 req_pdu = [conn["remoteParamName"]]
 
@@ -202,7 +210,8 @@ def start_agent(algoName, className, url):
                     rep_pdu = recvPDU(peer_sock)
                     if rep_pdu[0] != "pullValuesRep":
                         print(
-                            f"agent {algoName} got {rep_pdu[0]} instead of pullValuesRep"
+                            f"agent {algoName} got {
+                                rep_pdu[0]} instead of pullValuesRep"
                         )
                         control_socket.close()
                         return
@@ -216,21 +225,16 @@ def start_agent(algoName, className, url):
                     return
             break
 
-        
-
         # supposed algo stuff
 
         try:
             sendAckPDU(control_socket)
-            print(f"sendAckPDU2")
         except Exception as e:
             print(f"Error occured: {e}")
             return
 
         try:
-            print(f"before recv")
             pdu = recvPDU(control_socket)
-            print(f"after recv")
             if pdu[0] != "shiftValues":
                 print(f"agent {algoName}: cannot get shiftValues")
                 control_socket.close()
@@ -243,7 +247,6 @@ def start_agent(algoName, className, url):
         # Отправляет результаты другим агентам(push)
         # Propagate push-able data
         while True:
-            print(f"here here")
             print(f"{conn_pdu[1]["push"]}")
             for i in range(0, len(conn_pdu[1]["push"])):
                 print(f"loop {i}")
@@ -272,7 +275,6 @@ def start_agent(algoName, className, url):
 
         try:
             sendAckPDU(control_socket)
-            print(f"sendAckPDU3")
         except Exception as e:
             print(f"Error occured: {e}")
             return

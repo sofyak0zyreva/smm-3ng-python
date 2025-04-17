@@ -1,22 +1,30 @@
-import asn1tools
 import socket
 import struct
 
-asn1_compiler = asn1tools.compile_files(["../smm3ng-types/smm3ng-types.asn1",
-                                         "../smm3ng-protocol/smm3ng-protocol.asn1"], codec="der")
+import asn1tools  # type: ignore
+
+asn1_compiler = asn1tools.compile_files(
+    [
+        "../smm3ng-types/smm3ng-types.asn1",
+        "../smm3ng-protocol/smm3ng-protocol.asn1",
+    ],
+    codec="der",
+)
 
 
 def sendPDU(sock, pdu):
     # print(f"pdu {pdu}")
     try:
-        encoded_pdu = asn1_compiler.encode('SMM3NG-PDU', pdu)
+        encoded_pdu = asn1_compiler.encode("SMM3NG-PDU", pdu)
     except Exception as e:
-        raise RuntimeError("PDU encoding failed: {e}")
+        raise RuntimeError(f"PDU encoding failed: {e}")
     pdu_length = len(encoded_pdu)
-# Unlike send(), this method continues to send data from bytes until either all data has been sent or an error occurs.
-# None is returned on success.
-# The first character of the format string can be used to indicate the byte order, size and alignment of the packed data
-# (network (= big-endian) standard size no alignment)
+    # Unlike send(), this method continues to send data from bytes until either
+    # all data has been sent or an error occurs.
+    # None is returned on success.
+    # The first character of the format string can be used to indicate the
+    # byte order, size and alignment of the packed data
+    # (network (= big-endian) standard size no alignment)
     try:
         sock.send(struct.pack("<I", pdu_length))
         # print(f"pdu_length {pdu_length}")
@@ -37,10 +45,12 @@ def recvPDU(sock):
 
     if len(pdu_length_data) != 4:
         raise RuntimeError(
-            f"Invalid PDU length header (got {len(pdu_length_data)} bytes, expected 4)")
+            f"Invalid PDU length header (got {len(pdu_length_data)} bytes, expected 4)"
+        )
         # print(f"Cannot receive length of PDU: {len(pdu_length_data)}")
         # return None
-    # The ‘Standard size’ column refers to the size of the packed value in bytes when using standard size
+    # The ‘Standard size’ column refers to the size of the packed value in
+    # bytes when using standard size
     # The result is a tuple even if it contains exactly one item
     pdu_length = struct.unpack("<I", pdu_length_data)[0]
     print(f"Received PDU length: {pdu_length}")
@@ -50,13 +60,14 @@ def recvPDU(sock):
         chunk = sock.recv(pdu_length - len(pdu_data))
         if not chunk:
             raise RuntimeError(
-                f"Connection closed before receiving full PDU (got {len(pdu_data)}/{pdu_length} bytes)")
+                f"Connection closed before receiving full PDU (got {len(pdu_data)}/{pdu_length} bytes)"
+            )
         pdu_data += chunk
     print(f"Received PDU data: {pdu_data}")
     try:
-        decoded_pdu = asn1_compiler.decode('SMM3NG-PDU', pdu_data)
+        decoded_pdu = asn1_compiler.decode("SMM3NG-PDU", pdu_data)
     except Exception as e:
-        raise RuntimeError("PDU decoding failed: {e}")
+        raise RuntimeError(f"PDU decoding failed: {e}")
     print(f"decoded PDU data: {decoded_pdu}")
     return decoded_pdu
 
@@ -69,6 +80,7 @@ def sendAckPDU(sock):
 def sendNackPDU(sock, reason):
     pdu = ("nack", reason)
     return sendPDU(sock, pdu)
+
 
 # check if status is ack or nack.
 
@@ -84,9 +96,7 @@ def recvStatusPDU(sock):
 
 
 def sendRegPDU(sock, algoName, className, port):
-    pdu = ("reg", {
-        "algoName": algoName, "className": className, "port": port
-    })
+    pdu = ("reg", {"algoName": algoName, "className": className, "port": port})
     sendPDU(sock, pdu)
 
 

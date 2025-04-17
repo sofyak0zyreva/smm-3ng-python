@@ -1,8 +1,20 @@
-import unittest
 import socket
 import struct
+import unittest
 from unittest.mock import MagicMock
-from protocol import asn1_compiler, sendPDU, recvPDU, sendAckPDU, sendNackPDU, recvStatusPDU, sendRegPDU, sendNextCycle, sendShiftValuesPDU, sendDonePDU
+
+from protocol import (
+    asn1_compiler,
+    recvPDU,
+    recvStatusPDU,
+    sendAckPDU,
+    sendDonePDU,
+    sendNackPDU,
+    sendNextCycle,
+    sendPDU,
+    sendRegPDU,
+    sendShiftValuesPDU,
+)
 
 
 class TestPDUSocketFunctions(unittest.TestCase):
@@ -18,11 +30,11 @@ class TestPDUSocketFunctions(unittest.TestCase):
     def test_send_and_recv_pdu(self):
         pdu = ("ack", None)
         sendPDU(self.mock_socket, pdu)
-        encoded = asn1_compiler.encode('SMM3NG-PDU', pdu)
+        encoded = asn1_compiler.encode("SMM3NG-PDU", pdu)
         # mock recv responses before calling recvPDU
         self.mock_socket.recv.side_effect = [
             struct.pack("<I", len(encoded)),  # PDU length
-            encoded                           # actual PDU data
+            encoded,  # actual PDU data
         ]
         received_pdu = recvPDU(self.mock_socket)
         self.assertEqual(received_pdu, pdu)
@@ -69,13 +81,12 @@ class TestPDUSocketFunctions(unittest.TestCase):
         length = struct.pack("<I", 8)
         self.mock_socket.recv.side_effect = [
             length,
-            b'abc',  # partial data
-            b''  # simulate socket closing
+            b"abc",  # partial data
+            b"",  # simulate socket closing
         ]
         with self.assertRaises(RuntimeError) as cm:
             recvPDU(self.mock_socket)
-        self.assertIn(
-            "Connection closed before receiving full PDU", str(cm.exception))
+        self.assertIn("Connection closed before receiving full PDU", str(cm.exception))
 
     """
     tests sending and receiving status PDUs
@@ -92,10 +103,10 @@ class TestPDUSocketFunctions(unittest.TestCase):
 
     def test_recv_ack_pdu(self):
         pdu = ("ack", None)
-        encoded = asn1_compiler.encode('SMM3NG-PDU', pdu)
+        encoded = asn1_compiler.encode("SMM3NG-PDU", pdu)
         self.mock_socket.recv.side_effect = [
             struct.pack("<I", len(encoded)),
-            encoded
+            encoded,
         ]
         status, reason = recvStatusPDU(self.mock_socket)
         self.assertTrue(status)
@@ -103,10 +114,10 @@ class TestPDUSocketFunctions(unittest.TestCase):
 
     def test_recv_nack_pdu(self):
         pdu = ("nack", "Invalid input")
-        encoded = asn1_compiler.encode('SMM3NG-PDU', pdu)
+        encoded = asn1_compiler.encode("SMM3NG-PDU", pdu)
         self.mock_socket.recv.side_effect = [
             struct.pack("<I", len(encoded)),
-            encoded
+            encoded,
         ]
         status, reason = recvStatusPDU(self.mock_socket)
         self.assertFalse(status)
@@ -114,10 +125,10 @@ class TestPDUSocketFunctions(unittest.TestCase):
 
     def test_recv_non_status_pdu(self):
         pdu = ("done", None)
-        encoded = asn1_compiler.encode('SMM3NG-PDU', pdu)
+        encoded = asn1_compiler.encode("SMM3NG-PDU", pdu)
         self.mock_socket.recv.side_effect = [
             struct.pack("<I", len(encoded)),
-            encoded
+            encoded,
         ]
         with self.assertRaises(ValueError):
             recvStatusPDU(self.mock_socket)
