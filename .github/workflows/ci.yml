@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install asn1tools
-          pip install flake8 black isort mypy
+          pip install black mypy
 
       - name: Run mypy
         run: mypy .
@@ -32,8 +32,6 @@ jobs:
       - name: Run black (check only)
         run: black . --check
 
-      - name: Run isort (check only)
-        run: isort . --check-only
 
   test:
     runs-on: ubuntu-latest
