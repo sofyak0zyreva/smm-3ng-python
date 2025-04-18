@@ -1,0 +1,64 @@
+SMM3NG-PROTOCOL DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+    IMPORTS SMM3NG-Type FROM SMM3NG-TYPES;
+
+    SMM3NG-PDU ::= CHOICE {
+        ack NULL,
+        nack NackPDU,
+        reg RegisterPDU,
+        setConn SetupConnectionsPDU,
+        init InitPDU,
+        shiftValues NULL,
+        nextCycle NextCyclePDU,
+        pushValues PushValuesPDU,
+        pushValuesLinuxSHM PushValuesLinuxSHMPDU,
+        pullValuesReq PullValuesReqPDU,
+        pullValuesRep PullValuesRepPDU,
+        pullValuesRepLinuxSHM PullValuesRepLinuxSHMPDU,
+        done NULL,
+        ...
+    }
+
+    NackPDU ::= PrintableString
+
+    RegisterPDU ::= SEQUENCE {
+        algoName PrintableString,
+        className PrintableString,
+        port INTEGER
+    }
+
+    SetupConnectionsPDU ::= SEQUENCE {
+        push ConnectionsPDU,
+        pull ConnectionsPDU
+    }
+
+    ConnectionsPDU ::= SET OF ConnectionPDU
+
+    ConnectionPDU ::= SEQUENCE {
+        localParamName PrintableString,
+        remoteAlgoName PrintableString,
+        remoteParamName PrintableString,
+        address PrintableString,
+        port INTEGER
+    }
+
+    InitPDU ::= SET OF SMM3NG-Variable
+
+    SMM3NG-Variable ::= SEQUENCE {
+        name PrintableString,
+        value SMM3NG-Type
+    }
+
+    NextCyclePDU ::= SEQUENCE {
+        timestamp INTEGER
+    }
+
+    PushValuesPDU ::= SET OF SMM3NG-Variable
+
+    PushValuesLinuxSHMPDU ::= PrintableString
+
+    PullValuesReqPDU ::= SET OF PrintableString
+
+    PullValuesRepPDU ::= SET OF SMM3NG-Variable
+
+    PullValuesRepLinuxSHMPDU ::= PrintableString
+END

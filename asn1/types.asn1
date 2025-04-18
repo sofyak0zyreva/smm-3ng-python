@@ -1,0 +1,15 @@
+SMM3NG-TYPES DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+    SMM3NG-Type ::= CHOICE {
+        integer INTEGER,
+        boolean BOOLEAN,
+        str UTF8String,
+        real REAL,
+        blob OCTET STRING,
+        custom CustomType
+    }
+
+    CustomType ::= SEQUENCE {
+        type OBJECT IDENTIFIER,
+        data OCTET STRING
+    }
+END
