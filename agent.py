@@ -54,7 +54,7 @@ def connect_to_peer(addr, data_port):
 
 
 # conn_pdu = {"push" : [{"localParamName": , "remoteAlgoName": ,
-#  "remoteParamName": , "address": , "port" : }, {}, ..],
+# "remoteParamName": , "address": , "port" : }, {}, ..],
 # "pull" : [{}, {}, ..]}
 
 
@@ -106,7 +106,6 @@ def data_responder_proc(sock):
                     return
 
                 try:
-                    # handling error in reception??
                     if pdu[0] == "pullValuesReq":
                         reply = []
                         for param_name in pdu[1]:
@@ -127,8 +126,6 @@ def data_responder_proc(sock):
                         return
                 except (RuntimeError, OSError, struct.error, ValueError) as e:
                     print(f"Cannot send PDU to agent peer: {e}")
-                    # peers.remove(s)
-                    # s.close()
 
 
 def start_agent(algoName, className, url):
