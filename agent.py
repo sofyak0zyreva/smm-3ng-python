@@ -3,6 +3,7 @@ import select
 import socket
 from typing import Any
 
+from algo import create_algorithm_instance
 from protocol import *
 
 
@@ -170,6 +171,9 @@ def start_agent(algoName, className, url):
     except Exception as e:
         print(f"Error occured: {e}")
         return
+
+    algo = create_algorithm_instance()
+
     while True:
         try:
             pdu = recvPDU(control_socket)
@@ -222,7 +226,9 @@ def start_agent(algoName, className, url):
                     return
             break
 
-        # supposed algo stuff
+        output_params = algo.run(input_params)
+        print(f"input_params {input_params}")
+        input_params.clear()
 
         try:
             sendAckPDU(control_socket)
