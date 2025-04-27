@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+
 class ConsumerAlgorithm:
-    
+
     def __init__(self):
-        pass  
+        pass
 
     def run(self, params: dict) -> dict:
         if "s" not in params:
