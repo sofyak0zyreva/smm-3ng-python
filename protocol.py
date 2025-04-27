@@ -1,13 +1,16 @@
 import socket
 import struct
-
+import os
 import asn1tools  # type: ignore
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+asn1_file_paths = [
+    os.path.join(current_dir, "asn1", "types.asn1"),
+    os.path.join(current_dir, "asn1", "protocol.asn1"),
+]
+
 asn1_compiler = asn1tools.compile_files(
-    [
-        "asn1/types.asn1",
-        "asn1/protocol.asn1",
-    ],
+    asn1_file_paths,
     codec="der",
 )
 
