@@ -1,10 +1,12 @@
+from unittest.mock import call
+from unittest.mock import patch, MagicMock
 from unittest.mock import mock_open, patch
 from agent import print_conn_pdu  # adjust import as needed
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 from agent import (create_data_responder_socket,
-                   connect_to_core, connect_to_peer, print_conn_pdu)
+				connect_to_core, connect_to_peer, print_conn_pdu, start_agent)
 
 
 class TestAgentFunctions(unittest.TestCase):
@@ -91,3 +93,127 @@ class TestAgentFunctions(unittest.TestCase):
 		handle.write.assert_has_calls(expected_calls, any_order=False)
 
 
+class TestStartAgent(unittest.TestCase):
+
+	@patch("agent.print_conn_pdu")
+	@patch("agent.create_algorithm_instance")
+	@patch("agent.sendAckPDU")
+	@patch("agent.recvPDU")
+	@patch("agent.connect_to_peer")
+	@patch("agent.connect_to_core")
+	@patch("agent.create_data_responder_socket")
+	def test_start_agent_done_cycle(self,
+                                mock_create_sock,
+                                mock_connect_core,
+                                mock_connect_peer,
+                                mock_recvPDU,
+                                mock_sendAck,
+                                mock_create_algo,
+                                mock_print_conn_pdu):
+
+		# mock sockets
+		mock_sock = MagicMock()
+		mock_create_sock.return_value = mock_sock
+		mock_sock.getsockname.return_value = ("localhost", 1234)
+		mock_control_sock = MagicMock()
+		mock_connect_core.return_value = mock_control_sock
+
+		# mock algorithm instance
+		mock_algo = MagicMock()
+		mock_algo.run.return_value = {"x": 42}
+		mock_create_algo.return_value = mock_algo
+
+		# set up PDUs
+		conn_data = {
+			"pull": [],
+			"push": []
+		}
+		mock_recvPDU.side_effect = [
+			("setConn", conn_data),
+			("nextCycle", None),
+			("shiftValues", [{"value": "x"}]),
+			("done", None)
+		]
+
+		start_agent("Algo", "Class", "tcp://localhost:9999")
+
+		# verify connections
+		mock_connect_core.assert_called()
+		mock_sendAck.assert_called() 
+		mock_algo.run.assert_called()
+	
+	@patch("agent.print_conn_pdu")
+	@patch("agent.create_algorithm_instance")
+	@patch("agent.sendAckPDU")
+	@patch("agent.recvStatusPDU")
+	@patch("agent.sendPDU")
+	@patch("agent.recvPDU")
+	@patch("agent.connect_to_peer")
+	@patch("agent.connect_to_core")
+	@patch("agent.create_data_responder_socket")
+	def test_full_start_agent_flow(
+		self,
+		mock_create_data_responder_socket,
+		mock_connect_to_core,
+		mock_connect_to_peer,
+		mock_recvPDU,
+		mock_sendPDU,
+		mock_recvStatusPDU,
+		mock_sendAckPDU,
+		mock_create_algorithm_instance,
+		mock_print_conn_pdu,
+	):
+		mock_data_sock = MagicMock()
+		mock_data_sock.getsockname.return_value = ("127.0.0.1", 10000)
+		mock_create_data_responder_socket.return_value = mock_data_sock
+
+		mock_control_sock = MagicMock()
+		mock_connect_to_core.return_value = mock_control_sock
+
+		mock_peer_sock = MagicMock()
+		mock_connect_to_peer.return_value = mock_peer_sock
+
+		# set up the connection PDU 
+		conn_pdu_data = {
+			"pull": [{
+				"localParamName": "input_val",
+				"remoteAlgoName": "PeerA",
+				"remoteParamName": "remote_val",
+				"address": "127.0.0.1",
+				"port": 5000
+			}],
+			"push": [{
+				"localParamName": "output_val",
+				"remoteAlgoName": "PeerA",
+				"remoteParamName": "remote_val",
+				"address": "127.0.0.1",
+				"port": 5000
+			}],
+		}
+
+		# mock the algorithm's behavior
+		algo_instance = MagicMock()
+		algo_instance.run.return_value = {"output_val": ("integer", 999)}
+		mock_create_algorithm_instance.return_value = algo_instance
+
+		# simulate recvPDU responses from core and peer
+		mock_recvPDU.side_effect = [
+			("setConn", conn_pdu_data),
+			("nextCycle", None),                        
+			("pullValuesRep", [{"name": "remote_val", "value": 123}]),
+			("shiftValues", [{"value": "output_val"}]),
+			("done", None)                              
+		]
+
+		start_agent("TestAlgo", "TestClass", "tcp://localhost:1234")
+
+		mock_connect_to_core.assert_called_once()
+		mock_connect_to_peer.assert_called_with("127.0.0.1", 5000)
+		mock_sendAckPDU.assert_called()
+		mock_sendPDU.assert_any_call(
+		 	mock_peer_sock, ("pullValuesReq", ["remote_val"]))
+		#algo_instance.run.assert_called_with({"input_val": 123})
+		# mock_sendPDU.assert_any_call(
+		# 	mock_peer_sock, ("pushValues", [{"name": "remote_val", "value": 999}]))
+		mock_recvStatusPDU.assert_called_with(mock_peer_sock)
+		
