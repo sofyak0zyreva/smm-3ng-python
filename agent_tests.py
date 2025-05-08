@@ -164,7 +164,7 @@ class TestStartAgent(unittest.TestCase):
 		mock_print_conn_pdu,
 	):
 		mock_data_sock = MagicMock()
-		mock_data_sock.getsockname.return_value = ("127.0.0.1", 10000)
+		mock_data_sock.getsockname.return_value = ("127.0.0.1", 5000)
 		mock_create_data_responder_socket.return_value = mock_data_sock
 
 		mock_control_sock = MagicMock()
@@ -177,31 +177,25 @@ class TestStartAgent(unittest.TestCase):
 		conn_pdu_data = {
 			"pull": [{
 				"localParamName": "input_val",
-				"remoteAlgoName": "PeerA",
-				"remoteParamName": "remote_val",
+				"remoteAlgoName": "my_producer",
+				"remoteParamName": "data",
 				"address": "127.0.0.1",
 				"port": 5000
 			}],
-			"push": [{
-				"localParamName": "output_val",
-				"remoteAlgoName": "PeerA",
-				"remoteParamName": "remote_val",
-				"address": "127.0.0.1",
-				"port": 5000
-			}],
+			"push": []
 		}
 
 		# mock the algorithm's behavior
 		algo_instance = MagicMock()
-		algo_instance.run.return_value = {"output_val": ("integer", 999)}
+		algo_instance.run.return_value = {}
 		mock_create_algorithm_instance.return_value = algo_instance
 
 		# simulate recvPDU responses from core and peer
 		mock_recvPDU.side_effect = [
 			("setConn", conn_pdu_data),
-			("nextCycle", None),                        
-			("pullValuesRep", [{"name": "remote_val", "value": 123}]),
-			("shiftValues", [{"value": "output_val"}]),
+			('nextCycle', {'timestamp': 0}),
+			('pullValuesRep', [{'name': 'data', 'value': ('integer', 0)}]),
+			('shiftValues', None),
 			("done", None)                              
 		]
 
@@ -211,9 +205,6 @@ class TestStartAgent(unittest.TestCase):
 		mock_connect_to_peer.assert_called_with("127.0.0.1", 5000)
 		mock_sendAckPDU.assert_called()
 		mock_sendPDU.assert_any_call(
-		 	mock_peer_sock, ("pullValuesReq", ["remote_val"]))
-		#algo_instance.run.assert_called_with({"input_val": 123})
-		# mock_sendPDU.assert_any_call(
-		# 	mock_peer_sock, ("pushValues", [{"name": "remote_val", "value": 999}]))
-		mock_recvStatusPDU.assert_called_with(mock_peer_sock)
+		 	mock_peer_sock, ('pullValuesReq', ['data']))
+		algo_instance.run.assert_called_with({'input_val': ('integer', 0)})
 		
