@@ -35,7 +35,6 @@ def connect_to_core(algoName, className, url, data_port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect((host, port))
-        print(f"Connected to {host}:{port}")
         print("sending reg pdu")
         sendRegPDU(sock, algoName, className, data_port)
         return sock
@@ -63,7 +62,6 @@ def print_conn_pdu(algoName, conn_pdu):
     file_path = f"/tmp/{algoName}"
     # the with statement automatically closes the file when the block ends
     with open(file_path, "w") as f:
-        print(f"Temporary file created at: {f.name}")
         f.write("pull:")
         for c in conn_pdu["pull"]:
             f.write(
@@ -137,7 +135,6 @@ def start_agent(algoName, className, url):
 
     try:
         control_socket = connect_to_core(algoName, className, url, port)
-        print(f"control_socket ${control_socket}")
     except Exception as e:
         print(f"Error occured: {e}")
         return control_socket
@@ -149,7 +146,6 @@ def start_agent(algoName, className, url):
         print(f"Error occured: {e}")
         control_socket.close()
         return
-    print(f"conn_pdu {conn_pdu}")
     if conn_pdu[0] != "setConn":
         control_socket.close()
         return
@@ -161,7 +157,6 @@ def start_agent(algoName, className, url):
         if remote_algo not in peers:
             peers[remote_algo] = connect_to_peer(conn["address"], conn["port"])
     for conn in conn_pdu[1]["pull"]:
-        print(f"conn {conn}")
         remote_algo = conn["remoteAlgoName"]
         if remote_algo not in peers:
             peers[remote_algo] = connect_to_peer(conn["address"], conn["port"])
@@ -177,13 +172,11 @@ def start_agent(algoName, className, url):
     while True:
         try:
             pdu = recvPDU(control_socket)
-            print(f"pdu[0] {pdu[0]}")
             if pdu[0] == "done":
                 sendAckPDU(control_socket)
                 break
             if pdu[0] != "nextCycle":
                 print(f"agent {algoName} : cannot get nextCycle")
-                print(f"pdu[0] {pdu[0]} ")
                 control_socket.close()
                 return
 
@@ -197,10 +190,8 @@ def start_agent(algoName, className, url):
 
         while True:
             for conn in conn_pdu[1]["pull"]:
-                print("loop")
                 peer_sock = peers[conn["remoteAlgoName"]]
                 req_pdu = [conn["remoteParamName"]]
-
                 try:
                     sendPDU(peer_sock, ("pullValuesReq", req_pdu))
                 except (RuntimeError, socket.error, struct.error) as e:
@@ -211,8 +202,7 @@ def start_agent(algoName, className, url):
                     rep_pdu = recvPDU(peer_sock)
                     if rep_pdu[0] != "pullValuesRep":
                         print(
-                            f"agent {algoName} got {
-                                rep_pdu[0]} instead of pullValuesRep"
+                            f"agent {algoName} got {rep_pdu[0]} instead of pullValuesRep"
                         )
                         control_socket.close()
                         return
@@ -226,8 +216,7 @@ def start_agent(algoName, className, url):
                     return
             break
 
-        output_params = algo.run(input_params)
-        print(f"input_params {input_params}")
+        output_params = algo.run(input_params.copy())
         input_params.clear()
 
         try:
@@ -250,16 +239,16 @@ def start_agent(algoName, className, url):
         # Отправляет результаты другим агентам(push)
         # Propagate push-able data
         while True:
-            print(f"{conn_pdu[1]["push"]}")
             for i in range(0, len(conn_pdu[1]["push"])):
-                print(f"loop {i}")
                 conn = conn_pdu[1]["push"][i]
                 peer_sock = peers[conn["remoteAlgoName"]]
                 req_pdu = []
+
                 var = {
                     "name": conn["remoteParamName"],
                     "value": output_params[pdu[1][i]["value"]],
                 }
+
                 req_pdu.append(var)
                 try:
                     sendPDU(peer_sock, ("pushValues", req_pdu))
