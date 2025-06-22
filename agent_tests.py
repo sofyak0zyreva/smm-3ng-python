@@ -1,6 +1,6 @@
 from unittest.mock import patch, MagicMock
 from unittest.mock import mock_open, patch
-from agent import print_conn_pdu 
+from agent import print_conn_pdu
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
