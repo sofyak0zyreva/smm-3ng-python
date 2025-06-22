@@ -49,7 +49,6 @@ def recvPDU(sock):
     # bytes when using standard size
     # The result is a tuple even if it contains exactly one item
     pdu_length = struct.unpack("<I", pdu_length_data)[0]
-    print(f"Received PDU length: {pdu_length}")
     # An empty bytes object
     pdu_data = b""
     while len(pdu_data) < pdu_length:
@@ -59,7 +58,6 @@ def recvPDU(sock):
                 f"Connection closed before receiving full PDU (got {len(pdu_data)}/{pdu_length} bytes)"
             )
         pdu_data += chunk
-    print(f"Received PDU data: {pdu_data}")
     try:
         decoded_pdu = asn1_compiler.decode("SMM3NG-PDU", pdu_data)
     except Exception as e:
@@ -78,7 +76,7 @@ def sendNackPDU(sock, reason):
     return sendPDU(sock, pdu)
 
 
-# check if status is ack or nack.
+# Check if status is ack or nack.
 
 
 def recvStatusPDU(sock):

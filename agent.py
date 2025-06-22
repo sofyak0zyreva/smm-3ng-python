@@ -60,7 +60,7 @@ def connect_to_peer(addr, data_port):
 
 def print_conn_pdu(algoName, conn_pdu):
     file_path = f"/tmp/{algoName}"
-    # the with statement automatically closes the file when the block ends
+    # The 'with' statement automatically closes the file when the block ends
     with open(file_path, "w") as f:
         f.write("pull:")
         for c in conn_pdu["pull"]:
@@ -85,7 +85,6 @@ def data_responder_proc(sock):
     peers = [sock]
     while True:
         read_fds = peers.copy()
-        # для мультиплексирования сокетов
         try:
             readable, _, _ = select.select(read_fds, [], [])
         except (ValueError, OSError) as e:
@@ -185,8 +184,7 @@ def start_agent(algoName, className, url):
             control_socket.close()
             return
 
-        # Получает данные от других агентов(pull)
-        # Collect pull-able data
+        # Collect data from other agents (pull)
 
         while True:
             for conn in conn_pdu[1]["pull"]:
@@ -236,8 +234,7 @@ def start_agent(algoName, className, url):
             control_socket.close()
             return
 
-        # Отправляет результаты другим агентам(push)
-        # Propagate push-able data
+        # Propagate results to other agents (push)
         while True:
             for i in range(0, len(conn_pdu[1]["push"])):
                 conn = conn_pdu[1]["push"][i]
