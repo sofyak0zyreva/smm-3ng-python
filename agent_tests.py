@@ -1,7 +1,6 @@
-from unittest.mock import call
 from unittest.mock import patch, MagicMock
 from unittest.mock import mock_open, patch
-from agent import print_conn_pdu  # adjust import as needed
+from agent import print_conn_pdu 
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -20,8 +19,8 @@ class TestAgentFunctions(unittest.TestCase):
     """
 
     @patch("socket.socket")
-    # self refers to the test case instance
-    # mock_socket_class is the mock for socket.socket
+    # 'self' refers to the test case instance
+    # 'mock_socket_class' is the mock for socket.socket
     def test_create_data_responder_socket(self, mock_socket_class):
         mock_socket = MagicMock()
         mock_socket_class.return_value = mock_socket
@@ -52,9 +51,8 @@ class TestAgentFunctions(unittest.TestCase):
 	test writing the correct content to the expected file
 	"""
 
-    # replace the built-in open function with a mock that simulates file I/O behavior
     @patch("builtins.open", new_callable=mock_open)
-    # mock_file is the result of mock_open(), so f becomes mock_file()
+    # 'mock_file' is the result of mock_open(), so f becomes mock_file()
     def test_print_conn_pdu(self, mock_file):
         algo_name = "TestAlgo"
         conn_pdu = {
@@ -86,7 +84,7 @@ class TestAgentFunctions(unittest.TestCase):
         }
 
         print_conn_pdu(algo_name, conn_pdu)
-        # check that the file was opened with the correct path and mode
+        # Check that the file was opened with the correct path and mode
         mock_file.assert_called_once_with(f"/tmp/{algo_name}", "w")
 
         handle = mock_file()
@@ -120,19 +118,19 @@ class TestStartAgent(unittest.TestCase):
         mock_print_conn_pdu,
     ):
 
-        # mock sockets
+        # Mock sockets
         mock_sock = MagicMock()
         mock_create_sock.return_value = mock_sock
         mock_sock.getsockname.return_value = ("localhost", 1234)
         mock_control_sock = MagicMock()
         mock_connect_core.return_value = mock_control_sock
 
-        # mock algorithm instance
+        # Mock algorithm instance
         mock_algo = MagicMock()
         mock_algo.run.return_value = {"x": 42}
         mock_create_algo.return_value = mock_algo
 
-        # set up PDUs
+        # Set up PDUs
         conn_data = {"pull": [], "push": []}
         mock_recvPDU.side_effect = [
             ("setConn", conn_data),
@@ -143,7 +141,7 @@ class TestStartAgent(unittest.TestCase):
 
         start_agent("Algo", "Class", "tcp://localhost:9999")
 
-        # verify connections
+        # Verify connections
         mock_connect_core.assert_called()
         mock_sendAck.assert_called()
         mock_algo.run.assert_called()
@@ -179,7 +177,7 @@ class TestStartAgent(unittest.TestCase):
         mock_peer_sock = MagicMock()
         mock_connect_to_peer.return_value = mock_peer_sock
 
-        # set up the connection PDU
+        # Set up the connection PDU
         conn_pdu_data = {
             "pull": [
                 {
@@ -193,12 +191,12 @@ class TestStartAgent(unittest.TestCase):
             "push": [],
         }
 
-        # mock the algorithm's behavior
+        # Mock the algorithm's behavior
         algo_instance = MagicMock()
         algo_instance.run.return_value = {}
         mock_create_algorithm_instance.return_value = algo_instance
 
-        # simulate recvPDU responses from core and peer
+        # Simulate recvPDU responses from core and peer
         mock_recvPDU.side_effect = [
             ("setConn", conn_pdu_data),
             ("nextCycle", {"timestamp": 0}),
@@ -264,9 +262,9 @@ class TestStartAgent(unittest.TestCase):
 
         start_agent("BadAgent", "BadClass", "tcp://localhost:1234")
 
-        # should NOT have called algo.run at all
+        # Should NOT have called algo.run at all
         mock_algo.run.assert_not_called()
-        # should have connected to peer anyway
+        # Should have connected to peer anyway
         mock_connect_to_peer.assert_called_with("127.0.0.1", 5001)
 
     @patch("agent.print_conn_pdu")
@@ -335,7 +333,7 @@ class TestStartAgent(unittest.TestCase):
 
         start_agent("BrokenShiftAlgo", "AgentClass", "tcp://localhost:1234")
 
-        # should have exited on bad shiftValues
+        # Should have exited on bad shiftValues
         mock_connect_to_core.assert_called_once()
         mock_connect_to_peer.assert_called_with("127.0.0.1", 5000)
         self.assertTrue(mock_sendAckPDU.call_count == 2)
