@@ -18,7 +18,7 @@ from protocol import (
 
 
 class TestPDUSocketFunctions(unittest.TestCase):
-    # a mock socket is used so that tests are fast, isolated, and do not depend on network
+    # A mock socket is used so that tests are fast, isolated, and do not depend on network
     # runs before evety single test: every test gets a fresh mock
     def setUp(self):
         self.mock_socket = MagicMock()
@@ -31,7 +31,7 @@ class TestPDUSocketFunctions(unittest.TestCase):
         pdu = ("ack", None)
         sendPDU(self.mock_socket, pdu)
         encoded = asn1_compiler.encode("SMM3NG-PDU", pdu)
-        # mock recv responses before calling recvPDU
+        # Mock recv responses before calling recvPDU
         self.mock_socket.recv.side_effect = [
             struct.pack("<I", len(encoded)),  # PDU length
             encoded,  # actual PDU data
@@ -42,11 +42,11 @@ class TestPDUSocketFunctions(unittest.TestCase):
     """
     tests raising Runtime Error when sending PDU
     """
-    # if the socket fails when sending, sendPDU function raises a RuntimeError
+    # If the socket fails when sending, sendPDU function raises a RuntimeError
 
     def test_send_with_socket_error(self):
         pdu = ("ack", None)
-        # whenever sendPDU calls sock.send(...), it will raise socket.error("Mock socket error")
+        # Whenever sendPDU calls sock.send(...), it will raise socket.error("Mock socket error")
         self.mock_socket.send.side_effect = socket.error("Mock socket error")
         with self.assertRaises(RuntimeError):
             sendPDU(self.mock_socket, pdu)
@@ -81,8 +81,8 @@ class TestPDUSocketFunctions(unittest.TestCase):
         length = struct.pack("<I", 8)
         self.mock_socket.recv.side_effect = [
             length,
-            b"abc",  # partial data
-            b"",  # simulate socket closing
+            b"abc",  # Partial data
+            b"",  # Simulate socket closing
         ]
         with self.assertRaises(RuntimeError) as cm:
             recvPDU(self.mock_socket)
