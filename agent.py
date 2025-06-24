@@ -81,51 +81,6 @@ output_params: dict[str, tuple[Any, Any]] = {}
 input_params = {}  # Stores received values
 
 
-def data_responder_proc(sock):
-    peers = [sock]
-    while True:
-        read_fds = peers.copy()
-        try:
-            readable, _, _ = select.select(read_fds, [], [])
-        except (ValueError, OSError) as e:
-            print(f"Select error: {e}")
-        for s in readable:
-            if s == sock:
-                try:
-                    conn, _ = sock.accept()
-                    peers.append(conn)
-                except OSError as e:
-                    print(f"Accept failed: {e}")
-            else:
-                try:
-                    pdu = recvPDU(s)
-                except (ValueError, RuntimeError) as e:
-                    print(f"Cannot receive data from agent peer: {e}")
-                    return
-
-                try:
-                    if pdu[0] == "pullValuesReq":
-                        reply = []
-                        for param_name in pdu[1]:
-                            if param_name in output_params:
-                                var = {
-                                    "name": param_name,
-                                    "value": output_params[param_name],
-                                }
-                            reply.append(var)
-                        sendPDU(s, ("pullValuesRep", reply))
-                    elif pdu[0] == "pushValues":
-                        for var in pdu[1]:
-                            param_name = var["name"]
-                            input_params[param_name] = var["value"]
-                        sendAckPDU(s)
-                    else:
-                        print("Invalid PDU received from agent peer")
-                        return
-                except (RuntimeError, OSError, struct.error, ValueError) as e:
-                    print(f"Cannot send PDU to agent peer: {e}")
-
-
 def start_agent(algoName, className, url):
     # Create a socket for receiving data from other agents
     data_responder_socket = create_data_responder_socket()
@@ -186,33 +141,29 @@ def start_agent(algoName, className, url):
 
         # Collect data from other agents (pull)
 
-        while True:
-            for conn in conn_pdu[1]["pull"]:
-                peer_sock = peers[conn["remoteAlgoName"]]
-                req_pdu = [conn["remoteParamName"]]
-                try:
-                    sendPDU(peer_sock, ("pullValuesReq", req_pdu))
-                except (RuntimeError, socket.error, struct.error) as e:
-                    print(f"agent {algoName}: cannot send values req")
+        for conn in conn_pdu[1]["pull"]:
+            peer_sock = peers[conn["remoteAlgoName"]]
+            req_pdu = [conn["remoteParamName"]]
+            try:
+                sendPDU(peer_sock, ("pullValuesReq", req_pdu))
+            except (RuntimeError, socket.error, struct.error) as e:
+                print(f"agent {algoName}: cannot send values req")
+                control_socket.close()
+                return
+            try:
+                rep_pdu = recvPDU(peer_sock)
+                if rep_pdu[0] != "pullValuesRep":
+                    print(f"agent {algoName} got {rep_pdu[0]} instead of pullValuesRep")
                     control_socket.close()
                     return
-                try:
-                    rep_pdu = recvPDU(peer_sock)
-                    if rep_pdu[0] != "pullValuesRep":
-                        print(
-                            f"agent {algoName} got {rep_pdu[0]} instead of pullValuesRep"
-                        )
-                        control_socket.close()
-                        return
-                    if len(rep_pdu[1]) == 0:
-                        continue
-                    var = rep_pdu[1][0]
-                    input_params[conn["localParamName"]] = var["value"]
-                except (ValueError, RuntimeError) as e:
-                    print(f"agent {algoName}: cannot recv values reply")
-                    control_socket.close()
-                    return
-            break
+                if len(rep_pdu[1]) == 0:
+                    continue
+                var = rep_pdu[1][0]
+                input_params[conn["localParamName"]] = var["value"]
+            except (ValueError, RuntimeError) as e:
+                print(f"agent {algoName}: cannot recv values reply")
+                control_socket.close()
+                return
 
         output_params = algo.run(input_params.copy())
         input_params.clear()
@@ -235,32 +186,31 @@ def start_agent(algoName, className, url):
             return
 
         # Propagate results to other agents (push)
-        while True:
-            for i in range(0, len(conn_pdu[1]["push"])):
-                conn = conn_pdu[1]["push"][i]
-                peer_sock = peers[conn["remoteAlgoName"]]
-                req_pdu = []
 
-                var = {
-                    "name": conn["remoteParamName"],
-                    "value": output_params[pdu[1][i]["value"]],
-                }
+        for i in range(0, len(conn_pdu[1]["push"])):
+            conn = conn_pdu[1]["push"][i]
+            peer_sock = peers[conn["remoteAlgoName"]]
+            req_pdu = []
 
-                req_pdu.append(var)
+            var = {
+                "name": conn["remoteParamName"],
+                "value": output_params[pdu[1][i]["value"]],
+            }
+
+            req_pdu.append(var)
+            try:
+                sendPDU(peer_sock, ("pushValues", req_pdu))
+            except (RuntimeError, socket.error, struct.error) as e:
+                print(f"agent {algoName}: cannot send values req")
+                control_socket.close()
+                return
+            req_pdu.clear()
+            while True:
                 try:
-                    sendPDU(peer_sock, ("pushValues", req_pdu))
-                except (RuntimeError, socket.error, struct.error) as e:
-                    print(f"agent {algoName}: cannot send values req")
-                    control_socket.close()
-                    return
-                req_pdu.clear()
-                while True:
-                    try:
-                        recvStatusPDU(peer_sock)
-                    except (ValueError, RuntimeError) as e:
-                        print(f"Error occured: {e}")
-                    break
-            break
+                    recvStatusPDU(peer_sock)
+                except (ValueError, RuntimeError) as e:
+                    print(f"Error occured: {e}")
+                break
 
         try:
             sendAckPDU(control_socket)
