@@ -51,4 +51,4 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          python -m unittest protocol_tests.py agent_tests.py
+          python -m unittest tests/protocol_tests.py tests/agent_tests.py
