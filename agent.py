@@ -1,5 +1,4 @@
 import re
-import select
 import socket
 from typing import Any
 

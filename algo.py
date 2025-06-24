@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-
-
 class ConsumerAlgorithm:
 
+    # to explicitly show possibilities for more complex algorithms
     def __init__(self):
         pass
 

@@ -5,9 +5,8 @@ from agent import start_agent
 
 
 def usage():
-    print("Usage: python main.py <command> [args]")
+    print("Usage: python3 main.py <command> [args]")
     print("Command:")
-    print("\tmetadata        - display metadata")
     print(
         "\tstart algoname instancename url  - start named module and connect to core url"
     )
@@ -20,9 +19,7 @@ def main():
 
     command = sys.argv[1]
 
-    if command == "metadata":
-        print("NIY")  # Not Implemented Yet
-    elif command == "start":
+    if command == "start":
         if len(sys.argv) < 5:
             usage()
             return 1
